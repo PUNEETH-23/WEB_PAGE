@@ -137,7 +137,6 @@
             <button class="menu-button" onclick="showSection('founders')">Home</button>
             <button class="menu-button" onclick="showSection('graphs')">Graphs</button>
             <button class="menu-button" onclick="showSection('agriculture')">Agriculture Companion</button>
-            
         </div>
 
         <div class="right-column">
@@ -202,138 +201,18 @@
     </div>
 
     <script>
-        // JavaScript code remains the same as before
-        let phData = [];
-        let tdsData = [];
-        let turbidityData = [];
-        let customData = [];
+        // JavaScript code to read CSV data and update charts
+        function parseCSV(text) {
+            const lines = text.split('\n');
+            const headers = lines[0].split(',');
+            const rows = lines.slice(1).map(line => line.split(','));
+            return { headers, rows };
+        }
 
-        const ctxPh = document.getElementById('phChart').getContext('2d');
-        const ctxTds = document.getElementById('tdsChart').getContext('2d');
-        const ctxTurbidity = document.getElementById('turbidityChart').getContext('2d');
-        const ctxCustom = document.getElementById('customChart').getContext('2d');
-
-        const phChart = new Chart(ctxPh, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'pH',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    data: phData
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: { title: { display: true, text: 'Time' } },
-                    y: { title: { display: true, text: 'pH Level' } }
-                }
-            }
-        });
-
-        const tdsChart = new Chart(ctxTds, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'TDS',
-                    borderColor: 'rgba(153, 102, 255, 1)',
-                    backgroundColor: 'rgba(153, 102, 255, 0.2)',
-                    data: tdsData
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: { title: { display: true, text: 'Time' } },
-                    y: { title: { display: true, text: 'TDS' } }
-                }
-            }
-        });
-
-        const turbidityChart = new Chart(ctxTurbidity, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Turbidity',
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                    data: turbidityData
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: { title: { display: true, text: 'Time' } },
-                    y: { title: { display: true, text: 'Turbidity' } }
-                }
-            }
-        });
-
-        const customChart = new Chart(ctxCustom, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Custom Parameter',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                    data: customData
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    x: { title: { display: true, text: 'Time' } },
-                    y: { title: { display: true, text: 'Value' } }
-                }
-            }
-        });
-
-        function updateCharts() {
-            fetch('/get-sensor-data')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.timestamp && data.ph !== undefined && data.tds !== undefined && data.turbidity !== undefined && data.custom !== undefined) {
-                        phChart.data.labels.push(data.timestamp);
-                        tdsChart.data.labels.push(data.timestamp);
-                        turbidityChart.data.labels.push(data.timestamp);
-                        customChart.data.labels.push(data.timestamp);
-
-                        phData.push(data.ph);
-                        tdsData.push(data.tds);
-                        turbidityData.push(data.turbidity);
-                        customData.push(data.custom);
-
-                        if (phData.length > 100) {
-                            phData.shift();
-                            phChart.data.labels.shift();
-                        }
-
-                        if (tdsData.length > 100) {
-                            tdsData.shift();
-                            tdsChart.data.labels.shift();
-                        }
-
-                        if (turbidityData.length > 100) {
-                            turbidityData.shift();
-                            turbidityChart.data.labels.shift();
-                        }
-
-                        if (customData.length > 100) {
-                            customData.shift();
-                            customChart.data.labels.shift();
-                        }
-
-                        phChart.update();
-                        tdsChart.update();
-                        turbidityChart.update();
-                        customChart.update();
-                    }
-                });
+        function fetchCSV(url) {
+            return fetch(url)
+                .then(response => response.text())
+                .then(text => parseCSV(text));
         }
 
         function showSection(sectionId) {
@@ -356,34 +235,117 @@
             }
         }
 
-        function findSuitableCrops() {
-            const suitableCropsDiv = document.getElementById('suitableCrops');
-            suitableCropsDiv.innerHTML = '';
+        document.addEventListener('DOMContentLoaded', () => {
+            const ctxPh = document.getElementById('phChart').getContext('2d');
+            const ctxTds = document.getElementById('tdsChart').getContext('2d');
+            const ctxTurbidity = document.getElementById('turbidityChart').getContext('2d');
+            const ctxCustom = document.getElementById('customChart').getContext('2d');
 
-            const phValue = phData[phData.length - 1];
-            if (phValue === undefined) return;
-
-            const table = document.getElementById('cropTable');
-            const trs = table.getElementsByTagName('tr');
-
-            let suitableCrops = [];
-            for (let i = 1; i < trs.length; i++) {
-                const crop = trs[i].getElementsByTagName('td')[0].innerText;
-                const range = trs[i].getElementsByTagName('td')[1].innerText;
-                const [min, max] = range.split('-').map(val => parseFloat(val.trim()));
-
-                if (phValue >= min && phValue <= max) {
-                    suitableCrops.push(crop);
+            const phChart = new Chart(ctxPh, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'pH',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        data: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: 'Time' } },
+                        y: { title: { display: true, text: 'pH Level' } }
+                    }
                 }
-            }
+            });
 
-            suitableCropsDiv.innerHTML = `<h3>Suitable Crops for pH ${phValue}</h3><ul>${suitableCrops.map(crop => `<li>${crop}</li>`).join('')}</ul>`;
-        }
+            const tdsChart = new Chart(ctxTds, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'TDS',
+                        borderColor: 'rgba(153, 102, 255, 1)',
+                        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                        data: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: 'Time' } },
+                        y: { title: { display: true, text: 'TDS Level' } }
+                    }
+                }
+            });
 
-        setInterval(updateCharts, 2000);
-        setInterval(findSuitableCrops, 5000); // Update suitable crops every 5 seconds
+            const turbidityChart = new Chart(ctxTurbidity, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Turbidity',
+                        borderColor: 'rgba(255, 159, 64, 1)',
+                        backgroundColor: 'rgba(255, 159, 64, 0.2)',
+                        data: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: 'Time' } },
+                        y: { title: { display: true, text: 'Turbidity Level' } }
+                    }
+                }
+            });
 
-        // ... (rest of the JavaScript code remains the same)
+            const customChart = new Chart(ctxCustom, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Custom Parameter',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        data: []
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { title: { display: true, text: 'Time' } },
+                        y: { title: { display: true, text: 'Value' } }
+                    }
+                }
+            });
+
+            fetchCSV('data.csv').then(data => {
+                const timestamps = data.rows.map(row => row[0]);
+                const phValues = data.rows.map(row => parseFloat(row[1]));
+                const tdsValues = data.rows.map(row => parseFloat(row[2]));
+                const turbidityValues = data.rows.map(row => parseFloat(row[3]));
+
+                phChart.data.labels = timestamps;
+                phChart.data.datasets[0].data = phValues;
+                phChart.update();
+
+                tdsChart.data.labels = timestamps;
+                tdsChart.data.datasets[0].data = tdsValues;
+                tdsChart.update();
+
+                turbidityChart.data.labels = timestamps;
+                turbidityChart.data.datasets[0].data = turbidityValues;
+                turbidityChart.update();
+
+                // For the custom chart, you can calculate your custom parameter here
+                const customValues = phValues.map((ph, index) => ph * tdsValues[index] * turbidityValues[index]);
+                customChart.data.labels = timestamps;
+                customChart.data.datasets[0].data = customValues;
+                customChart.update();
+            });
+        });
     </script>
 </body>
 </html>
